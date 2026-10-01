@@ -1,0 +1,54 @@
+name: Double_Insurance_Strategy
+
+on:
+  schedule:
+    # 每天北京时间 15:30 运行 (UTC 07:30)
+    - cron: '30 7 * * *'
+  push:
+    paths:
+      - 'Double_Insurance_Strategy.py'
+      - '.github/workflows/Double_Insurance_Strategy.yml'
+  workflow_dispatch: 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: pip install pandas numpy
+
+      - name: Run Strategy Script
+        run: python Double_Insurance_Strategy.py
+
+      - name: Commit and Push Results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # 1. 先把生成的结果加入暂存区
+          git add results/
+          
+          # 2. 检查是否有新生成的文件
+          if [ -n "$(git status --porcelain)" ]; then
+            # 3. 暂时隐藏改动，拉取最新的远程代码，防止冲突
+            git stash
+            git pull --rebase origin main
+            git stash pop
+            
+            # 4. 再次 add (防止 stash pop 后状态变化) 并提交
+            git add results/
+            git commit -m "Auto: Update Strategy Results $(date +'%Y-%m-%d %H:%M')"
+            git push origin main
+          else
+            echo "No changes to commit"
+          fi
