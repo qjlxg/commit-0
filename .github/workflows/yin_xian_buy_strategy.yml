@@ -1,0 +1,52 @@
+name: yin_xian_buy_strategy
+
+on:
+  schedule:
+    - cron: '30 9 * * *'
+  workflow_dispatch: 
+  push:
+    paths:
+      - 'yin_xian_buy_strategy.py'
+      - '.github/workflows/yin_xian_buy_strategy.yml'
+
+jobs:
+  run_strategy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: pip install pandas numpy
+
+      - name: Run Strategy Script
+        run: python yin_xian_buy_strategy.py
+
+      - name: Commit and Push Results
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          
+          # 1. 暂存新生成的结果文件
+          git add .
+          git stash
+          
+          # 2. 强制同步远程仓库（解决版本冲突）
+          git pull --rebase origin main
+          
+          # 3. 恢复结果并提交
+          git stash pop || echo "No stashed changes"
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "自动复盘精选: $(date +'%Y-%m-%d %H:%M')"
+            git push origin main
+          fi
